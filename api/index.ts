@@ -5,16 +5,20 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+function getAI() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    throw new Error("Missing GEMINI_API_KEY in environment variables. Please check Vercel Settings -> Environment Variables and ensure you have REDEPLOYED the app after adding it.");
+  }
+  return new GoogleGenAI({ apiKey: key });
+}
 
 app.use(express.json({ limit: '10mb' }));
 
 app.post("/api/ai/identify", async (req, res) => {
   try {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in environment variables. Please add it to Vercel settings." });
-    }
+    const ai = getAI();
     const { imageBase64 } = req.body;
     const model = "gemini-3-flash-preview";
     const systemInstruction = `You are an expert fashion cataloger. Analyze the clothing item in the image. Identify its category, color, material, thickness, style, and suitable seasons. Return JSON.`;
@@ -31,10 +35,7 @@ app.post("/api/ai/identify", async (req, res) => {
 
 app.post("/api/ai/recommend", async (req, res) => {
   try {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in environment variables. Please add it to Vercel settings." });
-    }
+    const ai = getAI();
     const { wardrobe, weather, style, scene, userProfile } = req.body;
     const model = "gemini-3-flash-preview";
     const wardrobeSummary = wardrobe.map((item: any) => ({ name: item.name, category: item.category, color: item.color }));
@@ -54,6 +55,7 @@ app.post("/api/ai/recommend", async (req, res) => {
 
 app.post("/api/ai/preview", async (req, res) => {
   try {
+    const ai = getAI();
     const { outfit } = req.body;
     const model = "gemini-2.5-flash-image";
     const response = await ai.models.generateContent({
