@@ -8,6 +8,41 @@ import { generateOutfitRecommendations, generateVirtualPreview } from '../servic
 import { WeatherData, Style, Scene, ClothingItem, OutfitRecommendation, UserProfile } from '../types';
 import { cn } from '../lib/utils';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error Details: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export default function Daily() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [style, setStyle] = useState<Style>('Any');
@@ -30,12 +65,13 @@ export default function Daily() {
   }, []);
 
   const handleGenerate = async () => {
+    console.log("Recommend button clicked");
     if (!auth.currentUser) {
-      alert("Please log in first.");
+      alert("Please log in first to use AI styling.");
       return;
     }
     if (!weather) {
-      alert("Still loading weather data... Please wait.");
+      alert("Fetching local weather... Please wait a moment.");
       return;
     }
     setIsGenerating(true);
@@ -43,43 +79,60 @@ export default function Daily() {
     setPreviews([]);
     setActiveRecIndex(0);
     try {
+      console.log("Fetching wardrobe...");
       // 1. Fetch wardrobe
-      const wardrobeSnap = await getDocs(query(collection(db, 'users', auth.currentUser.uid, 'wardrobe')));
+      let wardrobeSnap;
+      try {
+        wardrobeSnap = await getDocs(query(collection(db, 'users', auth.currentUser!.uid, 'wardrobe')));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, `users/${auth.currentUser?.uid}/wardrobe`);
+        return; // handleFirestoreError throws, but for TS completeness
+      }
+      
       const wardrobe = wardrobeSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClothingItem));
 
       if (wardrobe.length === 0) {
-        alert(" wardrobe is empty! Please add some clothes in the 'Wardrobe' tab first.");
+        alert("Your wardrobe is empty! Please add some clothes in the 'Wardrobe' tab first so StyleMate can suggest outfits from your own collection.");
         setIsGenerating(false);
         return;
       }
 
+      console.log(`Generating recommendations for ${wardrobe.length} items...`);
       // 2. Generate recommendations
       const recs = await generateOutfitRecommendations(wardrobe, weather, style, scene, profile || undefined);
+      console.log("Recommendations received:", recs?.length);
+
       if (!recs || recs.length === 0) {
-        throw new Error("No recommendations returned from AI. Check your API key or data.");
+        throw new Error("StyleMate couldn't find a perfect match. Try changing your style/occasion or add more items to your wardrobe.");
       }
       setRecommendations(recs);
 
+      console.log("Generating virtual previews...");
       // 3. Generate previews in parallel
       const previewPromises = recs.map(rec => generateVirtualPreview(rec, profile || undefined).catch(e => {
-        console.error("Preview failed:", e);
+        console.error("Preview failed for a look:", e);
         return "";
       }));
       const generatedPreviews = await Promise.all(previewPromises);
       setPreviews(generatedPreviews);
     } catch (error: any) {
-      console.error(error);
-      alert(`Error generating style: ${error.message || 'Unknown error'}. Make sure you have added GEMINI_API_KEY to your Vercel environment variables.`);
+      console.error("HandleGenerate Error:", error);
+      alert(`Styling Error: ${error.message || 'Unknown error'}. 
+      
+If you are seeing this, please check:
+1. Your internet connection.
+2. If this is a preview, wait a few seconds and try again.
+3. Make sure you have added clothes to your closet.`);
     } finally {
       setIsGenerating(false);
     }
   };
 
   return (
-    <div className="p-6 space-y-8 animate-in fade-in duration-700">
+    <div id="daily-page-container" className="p-6 space-y-8 animate-in fade-in duration-700">
       {/* Weather Card */}
       {weather && (
-        <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBE9E4] flex items-center justify-between">
+        <section id="weather-card" className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBE9E4] flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center space-x-2 text-[#A09D96] font-medium text-[10px] uppercase tracking-widest">
               <Sun size={14} className="text-[#5A5A40]" />
@@ -143,8 +196,9 @@ export default function Daily() {
       </section>
 
       {/* Actions */}
-      <div className="space-y-4">
+      <div id="action-buttons-container" className="space-y-4">
         <button
+          id="body-measurements-btn"
           onClick={() => setShowBodyModal(true)}
           className="w-full bg-white border border-[#EBE9E4] text-[#5A5A40] py-4 rounded-2xl font-medium text-sm flex items-center justify-center space-x-3 active:scale-[0.98] transition-all group"
         >
@@ -153,6 +207,7 @@ export default function Daily() {
           <ChevronRight size={14} className="text-[#C4C1B9] group-hover:translate-x-1 transition-transform" />
         </button>
         <button
+          id="generate-look-btn"
           onClick={handleGenerate}
           disabled={isGenerating}
           className="w-full bg-[#5A5A40] text-white py-5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center justify-center space-x-3 shadow-xl shadow-[#5A5A40]/10 active:scale-[0.98] transition-all disabled:opacity-50"
