@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User personal information and physical measurements",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "height": { "type": "number", "description": "Height in cm" },
+        "weight": { "type": "number", "description": "Weight in kg" },
+        "shoulderWidth": { "type": "number", "description": "Shoulder width in cm" },
+        "chest": { "type": "number", "description": "Chest measurement in cm" },
+        "waist": { "type": "number", "description": "Waist measurement in cm" },
+        "hip": { "type": "number", "description": "Hip measurement in cm" },
+        "legLength": { "type": "number", "description": "Leg length in cm" },
+        "sizePreference": { "type": "string", "enum": ["S", "M", "L", "XL"] },
+        "bodyStylePreference": { "type": "string", "description": "e.g., Slim, Loose, Hide Hips" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "ClothingItem": {
+      "title": "Clothing Item",
+      "description": "An item in the user's wardrobe",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Tops", "Bottoms", "Dresses", "Outerwear", "Shoes", "Bags", "Accessories"] },
+        "subCategory": { "type": "string" },
+        "color": { "type": "string" },
+        "material": { "type": "string" },
+        "thickness": { "type": "string", "enum": ["Thin", "Medium", "Thick"] },
+        "styles": { "type": "array", "items": { "type": "string" } },
+        "seasons": { "type": "array", "items": { "type": "string" } },
+        "suitableTemperatures": { "type": "object", "properties": { "min": { "type": "number" }, "max": { "type": "number" } } },
+        "status": { "type": "string", "enum": ["active", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "imageUrl", "category"]
+    },
+    "Outfit": {
+      "title": "Outfit",
+      "description": "A combination of clothing items",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemIds": { "type": "array", "items": { "type": "string" } },
+        "style": { "type": "string" },
+        "scene": { "type": "string" },
+        "recommendationReason": { "type": "string" },
+        "bodyAdaptationAdvice": { "type": "string" },
+        "previewImageUrl": { "type": "string" },
+        "weatherInfo": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "itemIds"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User documents"
+    },
+    "/users/{userId}/wardrobe/{itemId}": {
+      "schema": "ClothingItem",
+      "description": "User's wardrobe items"
+    },
+    "/users/{userId}/outfits/{outfitId}": {
+      "schema": "Outfit",
+      "description": "History of recommended outfits"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "StyleMate",
+  "description": "AI 智能穿搭助手 - 你的个人穿搭管家。基于已有衣橱、天气、场合和身材，智能生成每日最佳穿搭方案。",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "AI 穿搭建议",
+    "智能衣橱管理",
+    "虚拟预览"
+  ]
+}
