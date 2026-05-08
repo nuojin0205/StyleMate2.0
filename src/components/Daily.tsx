@@ -30,7 +30,14 @@ export default function Daily() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!auth.currentUser || !weather) return;
+    if (!auth.currentUser) {
+      alert("Please log in first.");
+      return;
+    }
+    if (!weather) {
+      alert("Still loading weather data... Please wait.");
+      return;
+    }
     setIsGenerating(true);
     setRecommendations([]);
     setPreviews([]);
@@ -41,21 +48,28 @@ export default function Daily() {
       const wardrobe = wardrobeSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClothingItem));
 
       if (wardrobe.length === 0) {
-        alert("Please add some clothes to your wardrobe first!");
+        alert(" wardrobe is empty! Please add some clothes in the 'Wardrobe' tab first.");
         setIsGenerating(false);
         return;
       }
 
       // 2. Generate recommendations
       const recs = await generateOutfitRecommendations(wardrobe, weather, style, scene, profile || undefined);
+      if (!recs || recs.length === 0) {
+        throw new Error("No recommendations returned from AI. Check your API key or data.");
+      }
       setRecommendations(recs);
 
       // 3. Generate previews in parallel
-      const previewPromises = recs.map(rec => generateVirtualPreview(rec, profile || undefined));
+      const previewPromises = recs.map(rec => generateVirtualPreview(rec, profile || undefined).catch(e => {
+        console.error("Preview failed:", e);
+        return "";
+      }));
       const generatedPreviews = await Promise.all(previewPromises);
       setPreviews(generatedPreviews);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      alert(`Error generating style: ${error.message || 'Unknown error'}. Make sure you have added GEMINI_API_KEY to your Vercel environment variables.`);
     } finally {
       setIsGenerating(false);
     }
