@@ -11,6 +11,10 @@ app.use(express.json({ limit: '10mb' }));
 
 app.post("/api/ai/identify", async (req, res) => {
   try {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in environment variables. Please add it to Vercel settings." });
+    }
     const { imageBase64 } = req.body;
     const model = "gemini-3-flash-preview";
     const systemInstruction = `You are an expert fashion cataloger. Analyze the clothing item in the image. Identify its category, color, material, thickness, style, and suitable seasons. Return JSON.`;
@@ -27,6 +31,10 @@ app.post("/api/ai/identify", async (req, res) => {
 
 app.post("/api/ai/recommend", async (req, res) => {
   try {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY in environment variables. Please add it to Vercel settings." });
+    }
     const { wardrobe, weather, style, scene, userProfile } = req.body;
     const model = "gemini-3-flash-preview";
     const wardrobeSummary = wardrobe.map((item: any) => ({ name: item.name, category: item.category, color: item.color }));
@@ -38,7 +46,7 @@ app.post("/api/ai/recommend", async (req, res) => {
       config: { systemInstruction, responseMimeType: "application/json" }
     });
     const parsed = JSON.parse(response.text || "{}");
-    res.json({ recommendations: parsed.recommendations.map((r: any) => ({ ...r, style, scene, weatherInfo: weather })) });
+    res.json({ recommendations: (parsed.recommendations || []).map((r: any) => ({ ...r, style, scene, weatherInfo: weather })) });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

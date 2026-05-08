@@ -6,7 +6,10 @@ export async function identifyClothing(imageBase64: string): Promise<Partial<Clo
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ imageBase64 })
   });
-  if (!response.ok) throw new Error("Identify failed");
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Identify failed");
+  }
   return await response.json();
 }
 
@@ -22,7 +25,10 @@ export async function generateOutfitRecommendations(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wardrobe, weather, style, scene, userProfile })
   });
-  if (!response.ok) throw new Error("Recommendation failed");
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Recommendation failed");
+  }
   const data = await response.json();
   return data.recommendations;
 }
@@ -33,7 +39,10 @@ export async function generateVirtualPreview(outfit: OutfitRecommendation, userP
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ outfit, userProfile })
   });
-  if (!response.ok) throw new Error("Preview failed");
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Preview failed");
+  }
   const data = await response.json();
   return data.imageBase64;
 }
