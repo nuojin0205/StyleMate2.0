@@ -1,7 +1,21 @@
+import { useState } from 'react';
 import { signInWithGoogle } from '../lib/firebase';
 import { motion } from 'motion/react';
 
 export default function Auth() {
+const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 text-center">
       <motion.div
@@ -17,10 +31,18 @@ export default function Auth() {
         
         <div className="pt-8">
           <button
-            onClick={() => signInWithGoogle()}
-            className="w-full bg-stone-900 text-white py-4 px-8 rounded-full font-medium shadow-xl shadow-stone-200 hover:bg-stone-800 transition-all flex items-center justify-center space-x-3"
+            onClick={handleLogin}
+            disabled={isLoggingIn}
+            className="w-full bg-stone-900 text-white py-4 px-8 rounded-full font-medium shadow-xl shadow-stone-200 hover:bg-stone-800 transition-all flex items-center justify-center space-x-3 disabled:opacity-50"
           >
-            <span>Continue with Google</span>
+            {isLoggingIn ? (
+              <span className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Connecting...</span>
+              </span>
+            ) : (
+              <span>Continue with Google</span>
+            )}
           </button>
         </div>
       </motion.div>

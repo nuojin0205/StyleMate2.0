@@ -8,7 +8,21 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogle = async () => {
+  console.log("Attempting sign in with Google...");
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log("Sign in success:", result.user.email);
+    return result;
+  } catch (error) {
+    console.error("Sign in error:", error);
+    if (error instanceof Error && error.message.includes('popup-closed-by-user')) {
+      return;
+    }
+    alert("Sign in failed. If you are in a private window or on mobile, please try again or check browser settings.");
+    throw error;
+  }
+};
 
 // CRITICAL: Test connection on boot
 async function testConnection() {
